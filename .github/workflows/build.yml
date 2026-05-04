@@ -1,0 +1,52 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: dotnet build (Windows)
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64]
+        configuration: [Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore src/YtMdlp/YtMdlp.csproj /p:Platform=${{ matrix.platform }}
+
+      - name: Build
+        run: dotnet build src/YtMdlp/YtMdlp.csproj --no-restore -c ${{ matrix.configuration }} /p:Platform=${{ matrix.platform }}
+
+      - name: Publish (self-contained, unpackaged WinUI 3)
+        run: >
+          dotnet publish src/YtMdlp/YtMdlp.csproj
+          -c ${{ matrix.configuration }}
+          /p:Platform=${{ matrix.platform }}
+          -r win-${{ matrix.platform }}
+          --self-contained true
+          -o publish/${{ matrix.platform }}
+
+      - name: Upload publish artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yt-mdlp-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: publish/${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14

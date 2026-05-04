@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: dotnet build (Windows)
+    name: msbuild (Windows)
     runs-on: windows-latest
 
     strategy:
@@ -27,26 +27,33 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore
-        run: dotnet restore src/YtMdlp/YtMdlp.csproj /p:Platform=${{ matrix.platform }}
+      # WindowsAppSDK 1.7's MrtCore.PriGen targets require
+      # Microsoft.Build.Packaging.Pri.Tasks.dll, which only ships under the
+      # Visual Studio MSBuild path (not under the .NET SDK). Use VS's MSBuild.
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore (NuGet)
+        run: msbuild src\YtMdlp\YtMdlp.csproj -t:Restore -p:Platform=${{ matrix.platform }} -p:Configuration=${{ matrix.configuration }} -p:RestorePackagesConfig=true
 
       - name: Build
-        run: dotnet build src/YtMdlp/YtMdlp.csproj --no-restore -c ${{ matrix.configuration }} /p:Platform=${{ matrix.platform }}
+        run: msbuild src\YtMdlp\YtMdlp.csproj -t:Build -p:Platform=${{ matrix.platform }} -p:Configuration=${{ matrix.configuration }}
 
       - name: Publish (self-contained, unpackaged WinUI 3)
         run: >
-          dotnet publish src/YtMdlp/YtMdlp.csproj
-          -c ${{ matrix.configuration }}
-          /p:Platform=${{ matrix.platform }}
-          -r win-${{ matrix.platform }}
-          --self-contained true
-          -o publish/${{ matrix.platform }}
+          msbuild src\YtMdlp\YtMdlp.csproj
+          -t:Publish
+          -p:Platform=${{ matrix.platform }}
+          -p:Configuration=${{ matrix.configuration }}
+          -p:RuntimeIdentifier=win-${{ matrix.platform }}
+          -p:SelfContained=true
+          -p:PublishDir=publish\${{ matrix.platform }}\
 
       - name: Upload publish artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: yt-mdlp-${{ matrix.platform }}-${{ matrix.configuration }}
-          path: publish/${{ matrix.platform }}
+          path: src/YtMdlp/publish/${{ matrix.platform }}
           if-no-files-found: error
           retention-days: 14

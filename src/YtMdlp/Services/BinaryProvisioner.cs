@@ -5,9 +5,13 @@ using System.Threading.Tasks;
 namespace YtMdlp.Services;
 
 /// <summary>
-/// On first launch, copies bundled <c>yt-dlp.exe</c> / <c>ffmpeg.exe</c> from the app's
-/// <c>Assets/bin/</c> directory into <c>%LocalAppData%\yt-mdlp\bin\</c> so they can be
-/// invoked from a stable, writable location (acceptance criterion 8).
+/// On first launch, mirrors the bundled binaries (yt-dlp.exe + the BtbN ffmpeg
+/// shared build: ffmpeg.exe, ffprobe.exe, avcodec-*.dll, avformat-*.dll, etc.)
+/// from the app's <c>Assets/bin/</c> directory into
+/// <c>%LocalAppData%\yt-mdlp\bin\</c> so they can be invoked from a stable,
+/// writable location (acceptance criterion 8). All files are mirrored — not
+/// just the .exes — because ffmpeg.exe in the shared build resolves its
+/// codec/format DLLs from the directory it lives in.
 /// </summary>
 public sealed class BinaryProvisioner
 {
@@ -18,9 +22,19 @@ public sealed class BinaryProvisioner
             Directory.CreateDirectory(Paths.BinDir);
 
             var assetsBin = Path.Combine(AppContext.BaseDirectory, "Assets", "bin");
-            CopyIfMissing(Path.Combine(assetsBin, "yt-dlp.exe"), Paths.YtDlpExe);
-            CopyIfMissing(Path.Combine(assetsBin, "ffmpeg.exe"), Paths.FfmpegExe);
-            CopyIfMissing(Path.Combine(assetsBin, "ffprobe.exe"), Path.Combine(Paths.BinDir, "ffprobe.exe"));
+            if (!Directory.Exists(assetsBin)) return;
+
+            foreach (var src in Directory.EnumerateFiles(assetsBin, "*", SearchOption.AllDirectories))
+            {
+                var rel = Path.GetRelativePath(assetsBin, src);
+                if (string.Equals(Path.GetFileName(rel), ".gitkeep", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var dest = Path.Combine(Paths.BinDir, rel);
+                CopyIfMissing(src, dest);
+            }
         });
     }
 
@@ -30,6 +44,11 @@ public sealed class BinaryProvisioner
         {
             if (File.Exists(dest)) return;
             if (!File.Exists(source)) return;
+            var destDir = Path.GetDirectoryName(dest);
+            if (!string.IsNullOrEmpty(destDir))
+            {
+                Directory.CreateDirectory(destDir);
+            }
             File.Copy(source, dest, overwrite: false);
         }
         catch

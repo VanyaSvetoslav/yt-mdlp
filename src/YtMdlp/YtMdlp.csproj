@@ -32,19 +32,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Bundled binaries placeholder. yt-dlp.exe and ffmpeg.exe are NOT committed; use scripts/bootstrap.ps1
-         to populate Assets/bin/ before building, or the app will provision them on first launch
-         from a download fallback. The .gitkeep keeps the folder under version control. -->
+    <!-- Bundled binaries. yt-dlp.exe + the BtbN ffmpeg shared build (ffmpeg.exe,
+         ffprobe.exe, avcodec-*.dll, avformat-*.dll, avfilter-*.dll, etc.) live
+         here. They are NOT committed to git - run scripts/bootstrap.ps1 once
+         before building to populate this folder. We use a glob (rather than
+         per-file <None Update> entries) so that any DLLs or license files the
+         bootstrap script drops in are also copied to the publish output. -->
+    <Content Include="Assets\bin\**\*"
+             Exclude="Assets\bin\.gitkeep">
+      <Link>Assets\bin\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Update="Assets\bin\.gitkeep">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\bin\yt-dlp.exe" Condition="Exists('Assets\bin\yt-dlp.exe')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\bin\ffmpeg.exe" Condition="Exists('Assets\bin\ffmpeg.exe')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Assets\bin\ffprobe.exe" Condition="Exists('Assets\bin\ffprobe.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

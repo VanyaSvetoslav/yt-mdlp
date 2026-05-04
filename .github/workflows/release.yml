@@ -106,15 +106,34 @@ jobs:
             See <https://www.ffmpeg.org/legal.html>.
           "@ | Set-Content -Path (Join-Path $stage "README.md") -Encoding utf8
 
-          # Also produce a single-file zip alongside the loose tree, so users
-          # can grab one archive without cloning.
-          $zipName = "yt-mdlp-win-$env:Platform-$short.zip"
-          $zipPath = Join-Path $env:RUNNER_TEMP $zipName
-          if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
-          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -CompressionLevel Optimal
-          Copy-Item -Force $zipPath (Join-Path $stage $zipName)
+          # Note: we deliberately do NOT generate a single-file zip in the
+          # staged tree - the BtbN shared ffmpeg build + .NET self-contained
+          # runtime compresses to >100 MB, which exceeds GitHub's per-file push
+          # limit. Users can grab the same content as a zip via the green
+          # "Code -> Download ZIP" button on the Release branch (GitHub
+          # generates that on demand and is not subject to the per-file cap).
 
           "stage_dir=$stage" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Verify no staged file exceeds GitHub's 100 MB push limit
+        shell: pwsh
+        run: |
+          $stage = "${{ steps.stage.outputs.stage_dir }}"
+          $limit = 100MB
+          $oversized = Get-ChildItem -Path $stage -Recurse -File |
+                       Where-Object { $_.Length -ge $limit }
+          if ($oversized) {
+            Write-Error "The following files are >= 100 MB and would be rejected by GitHub's pre-receive hook:"
+            $oversized | ForEach-Object {
+              Write-Error ("  {0}  ({1} MB)" -f $_.FullName, [Math]::Round($_.Length / 1MB, 1))
+            }
+            exit 1
+          }
+          Write-Host "OK: all staged files are under 100 MB."
+          Get-ChildItem -Path $stage -Recurse -File |
+            Sort-Object Length -Descending |
+            Select-Object -First 15 |
+            ForEach-Object { Write-Host ("  {0}  ({1} MB)" -f $_.FullName, [Math]::Round($_.Length / 1MB, 1)) }
 
       - name: Deploy to Release branch
         uses: peaceiris/actions-gh-pages@v4

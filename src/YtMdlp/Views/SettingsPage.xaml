@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="YtMdlp.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:YtMdlp.ViewModels"
+    xmlns:models="using:YtMdlp.Models"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <vm:SettingsViewModel />
+    </Page.DataContext>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="20" MaxWidth="700">
+
+            <TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}"/>
+
+            <!-- Default output folder -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Default output folder" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Text="{x:Bind ViewModel.DefaultOutputFolder, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis"/>
+                    <Button
+                        Grid.Column="1"
+                        Content="Choose…"
+                        Command="{x:Bind ViewModel.PickDefaultFolderCommand}"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Default format -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Default format" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <ComboBox
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{x:Bind ViewModel.FormatOptions}"
+                    SelectedItem="{x:Bind ViewModel.SelectedDefaultFormat, Mode=TwoWay}"/>
+            </StackPanel>
+
+            <!-- Max concurrent -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Max concurrent downloads" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <NumberBox
+                    Minimum="1"
+                    Maximum="4"
+                    SmallChange="1"
+                    SpinButtonPlacementMode="Inline"
+                    Value="{x:Bind ViewModel.MaxConcurrentDownloads, Mode=TwoWay}"/>
+            </StackPanel>
+
+            <!-- Auto-update yt-dlp -->
+            <ToggleSwitch
+                Header="Auto-update yt-dlp on launch"
+                OffContent="Off"
+                OnContent="On"
+                IsOn="{x:Bind ViewModel.AutoUpdateYtDlp, Mode=TwoWay}"/>
+
+            <InfoBar
+                IsOpen="{x:Bind HasStatus, Mode=OneWay}"
+                Severity="Informational"
+                Title="Status"
+                Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay, FallbackValue=''}"
+                IsClosable="True"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,58 @@
+# Build results (don't ignore the project's Assets/bin/ asset folder)
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Pp]ublish/
+!src/YtMdlp/Assets/[Bb]in/
+
+# Visual Studio / Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# .NET
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Generated XAML/WinUI
+*.g.cs
+*.g.i.cs
+*.GeneratedMSBuildEditorConfig.editorconfig
+GeneratedFiles/
+
+# WinUI 3 / Windows App SDK
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.cer
+*.pfx
+
+# Bundled binaries (do NOT commit yt-dlp.exe / ffmpeg.exe — see scripts/bootstrap.ps1)
+src/YtMdlp/Assets/bin/yt-dlp.exe
+src/YtMdlp/Assets/bin/ffmpeg.exe
+src/YtMdlp/Assets/bin/ffprobe.exe
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs / coverage
+*.log
+TestResults/
+coverage*.xml
+*.coverage
+*.coveragexml

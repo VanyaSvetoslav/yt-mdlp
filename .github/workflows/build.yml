@@ -1,0 +1,59 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: msbuild (Windows)
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64]
+        configuration: [Release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # WindowsAppSDK 1.7's MrtCore.PriGen targets require
+      # Microsoft.Build.Packaging.Pri.Tasks.dll, which only ships under the
+      # Visual Studio MSBuild path (not under the .NET SDK). Use VS's MSBuild.
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore (NuGet)
+        run: msbuild src\YtMdlp\YtMdlp.csproj -t:Restore -p:Platform=${{ matrix.platform }} -p:Configuration=${{ matrix.configuration }} -p:RestorePackagesConfig=true
+
+      - name: Build
+        run: msbuild src\YtMdlp\YtMdlp.csproj -t:Build -p:Platform=${{ matrix.platform }} -p:Configuration=${{ matrix.configuration }}
+
+      - name: Publish (self-contained, unpackaged WinUI 3)
+        run: >
+          msbuild src\YtMdlp\YtMdlp.csproj
+          -t:Publish
+          -p:Platform=${{ matrix.platform }}
+          -p:Configuration=${{ matrix.configuration }}
+          -p:RuntimeIdentifier=win-${{ matrix.platform }}
+          -p:SelfContained=true
+          -p:PublishDir=publish\${{ matrix.platform }}\
+
+      - name: Upload publish artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yt-mdlp-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: src/YtMdlp/publish/${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14

@@ -91,8 +91,13 @@ This downloads:
 
 - `yt-dlp.exe` — the official Windows single-file build from
   <https://github.com/yt-dlp/yt-dlp/releases/latest>
-- `ffmpeg.exe` and `ffprobe.exe` — extracted from the Win64 GPL build on
-  <https://github.com/BtbN/FFmpeg-Builds/releases/latest>
+- `ffmpeg.exe` + `ffprobe.exe` + their codec DLLs (`avcodec-*.dll`,
+  `avformat-*.dll`, `avfilter-*.dll`, …) — extracted from the Win64 **GPL
+  shared** build on
+  <https://github.com/BtbN/FFmpeg-Builds/releases/latest>. We use the shared
+  build instead of the static one so that no individual file exceeds GitHub's
+  100 MB per-file push limit (this matters when the release workflow force-
+  pushes the published tree to the `Release` branch).
 
 You can also drop the binaries into `src/YtMdlp/Assets/bin/` manually.
 On first launch the app copies whatever it finds there into
@@ -135,7 +140,8 @@ Two workflows run on the `windows-latest` runner:
   on every push to `main` (and on demand via `workflow_dispatch`). Bootstraps
   `yt-dlp.exe` + `ffmpeg.exe`, publishes the self-contained binary tree, and
   force-pushes it as a single orphan commit to the [`Release`](../../tree/Release)
-  branch. A zip of the same contents is included alongside the loose tree.
+  branch. Use GitHub's **Code → Download ZIP** button on that branch (or the
+  `git clone` snippet below) to grab everything as one archive.
 
 ### Pre-built binaries (`Release` branch)
 

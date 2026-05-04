@@ -39,10 +39,13 @@ BundleArtifacts/
 *.cer
 *.pfx
 
-# Bundled binaries (do NOT commit yt-dlp.exe / ffmpeg.exe — see scripts/bootstrap.ps1)
-src/YtMdlp/Assets/bin/yt-dlp.exe
-src/YtMdlp/Assets/bin/ffmpeg.exe
-src/YtMdlp/Assets/bin/ffprobe.exe
+# Bundled binaries (do NOT commit — see scripts/bootstrap.ps1).
+# The bootstrap script lays down yt-dlp.exe plus the BtbN ffmpeg shared build
+# (ffmpeg.exe, ffprobe.exe, avcodec-*.dll, avformat-*.dll, avfilter-*.dll, etc.
+# and ffmpeg-LICENSE.txt). Ignore everything in Assets/bin/ except the
+# .gitkeep sentinel that keeps the folder under version control.
+src/YtMdlp/Assets/bin/*
+!src/YtMdlp/Assets/bin/.gitkeep
 
 # OS junk
 Thumbs.db

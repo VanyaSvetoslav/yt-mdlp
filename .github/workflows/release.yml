@@ -1,0 +1,128 @@
+name: release
+
+# Builds yt-mdlp as a self-contained Windows x64 binary tree (with bundled
+# yt-dlp.exe + ffmpeg.exe) and publishes the result to the `Release` branch
+# on every push to main, plus on demand via the workflow_dispatch trigger.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-branch
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & deploy to Release branch
+    runs-on: windows-latest
+
+    env:
+      Configuration: Release
+      Platform: x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up MSBuild (Visual Studio)
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Provision yt-dlp + ffmpeg
+        shell: pwsh
+        run: pwsh -File scripts/bootstrap.ps1
+
+      - name: Restore (NuGet)
+        shell: pwsh
+        run: msbuild src\YtMdlp\YtMdlp.csproj -t:Restore -p:Platform=$env:Platform -p:Configuration=$env:Configuration -p:RestorePackagesConfig=true
+
+      - name: Publish (self-contained, unpackaged WinUI 3)
+        shell: pwsh
+        run: >
+          msbuild src\YtMdlp\YtMdlp.csproj
+          -t:Publish
+          -p:Platform=$env:Platform
+          -p:Configuration=$env:Configuration
+          -p:RuntimeIdentifier=win-$env:Platform
+          -p:SelfContained=true
+          -p:PublishDir=publish\$env:Platform\
+
+      - name: Stage release artifacts
+        id: stage
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "release-stage"
+          if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          Copy-Item -Recurse -Force "src\YtMdlp\publish\$env:Platform\*" $stage
+
+          $sha   = $env:GITHUB_SHA
+          $short = $sha.Substring(0, 7)
+          $stamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+
+          @"
+          # yt-mdlp — pre-built Windows binaries
+
+          This branch is **auto-generated** by [.github/workflows/release.yml](https://github.com/$($env:GITHUB_REPOSITORY)/blob/main/.github/workflows/release.yml).
+          Do not commit changes here directly — they will be overwritten on the next push to ``main``.
+
+          - **Built from commit:** [``$short``](https://github.com/$($env:GITHUB_REPOSITORY)/commit/$sha)
+          - **Built at:** $stamp
+          - **Configuration:** $env:Configuration / $env:Platform
+          - **Runtime:** self-contained .NET 8 + Windows App SDK 1.7
+
+          ## How to run
+
+          1. Click the green **"Code"** button above and download this branch as a zip
+             (or clone it).
+          2. Extract and run ``YtMdlp.exe``.
+
+          The bundled ``Assets/bin/yt-dlp.exe`` + ``ffmpeg.exe`` are extracted to
+          ``%LocalAppData%\yt-mdlp\bin\`` on first launch.
+
+          ## Source
+
+          Source code lives on the
+          [``main``](https://github.com/$($env:GITHUB_REPOSITORY)/tree/main) branch.
+
+          ## Licensing
+
+          - ``YtMdlp.exe`` and the project source: MIT (see
+            [``LICENSE``](https://github.com/$($env:GITHUB_REPOSITORY)/blob/main/LICENSE)
+            on ``main``).
+          - Bundled ``yt-dlp.exe`` — Unlicense (public domain). See
+            <https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE>.
+          - Bundled ``ffmpeg.exe`` — **GPL v3** (BtbN's GPL build of FFmpeg).
+            See <https://www.ffmpeg.org/legal.html>.
+          "@ | Set-Content -Path (Join-Path $stage "README.md") -Encoding utf8
+
+          # Also produce a single-file zip alongside the loose tree, so users
+          # can grab one archive without cloning.
+          $zipName = "yt-mdlp-win-$env:Platform-$short.zip"
+          $zipPath = Join-Path $env:RUNNER_TEMP $zipName
+          if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -CompressionLevel Optimal
+          Copy-Item -Force $zipPath (Join-Path $stage $zipName)
+
+          "stage_dir=$stage" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Deploy to Release branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ steps.stage.outputs.stage_dir }}
+          publish_branch: Release
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: '41898282+github-actions[bot]@users.noreply.github.com'
+          commit_message: 'build: ${{ github.sha }}'

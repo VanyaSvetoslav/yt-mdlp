@@ -126,9 +126,28 @@ fallback path). To produce an MSIX you can either:
 
 ### CI
 
-[`.github/workflows/build.yml`](./.github/workflows/build.yml) runs on every
-push and PR against `main`. It executes `dotnet restore` / `build` / `publish`
-on a `windows-latest` runner and uploads the published self-contained artifact.
+Two workflows run on the `windows-latest` runner:
+
+- [`.github/workflows/build.yml`](./.github/workflows/build.yml) — runs on
+  every push and PR against `main`. Executes MSBuild `Restore` / `Build` /
+  `Publish` and uploads the published self-contained artifact for download.
+- [`.github/workflows/release.yml`](./.github/workflows/release.yml) — runs
+  on every push to `main` (and on demand via `workflow_dispatch`). Bootstraps
+  `yt-dlp.exe` + `ffmpeg.exe`, publishes the self-contained binary tree, and
+  force-pushes it as a single orphan commit to the [`Release`](../../tree/Release)
+  branch. A zip of the same contents is included alongside the loose tree.
+
+### Pre-built binaries (`Release` branch)
+
+The latest binaries built from `main` live on the orphan branch
+[`Release`](../../tree/Release). To grab them without cloning the source:
+
+```powershell
+git clone --depth 1 --single-branch -b Release https://github.com/VanyaSvetoslav/yt-mdlp.git yt-mdlp-release
+.\yt-mdlp-release\YtMdlp.exe
+```
+
+…or download the branch's zip via the GitHub UI.
 
 ## License
 

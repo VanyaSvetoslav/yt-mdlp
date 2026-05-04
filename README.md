@@ -140,7 +140,8 @@ Two workflows run on the `windows-latest` runner:
   on every push to `main` (and on demand via `workflow_dispatch`). Bootstraps
   `yt-dlp.exe` + `ffmpeg.exe`, publishes the self-contained binary tree, and
   force-pushes it as a single orphan commit to the [`Release`](../../tree/Release)
-  branch. A zip of the same contents is included alongside the loose tree.
+  branch. Use GitHub's **Code → Download ZIP** button on that branch (or the
+  `git clone` snippet below) to grab everything as one archive.
 
 ### Pre-built binaries (`Release` branch)
 
